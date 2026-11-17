@@ -20,13 +20,6 @@ def inicializar_populacao(tamanho_populacao, quantidade_antenas, largura, altura
 
 
 def selecionar_roleta(populacao, fitnesses, soma):
-    """
-    Seleciona um indivíduo utilizando o método da roleta.
-
-    soma: soma do fitness de toda a população.
-    aux: acumula os fitness dos indivíduos.
-    op: número aleatório entre 0 e a soma dos fitness.
-    """
 
     if not populacao:
         raise ValueError("A população não pode estar vazia.")
@@ -50,14 +43,6 @@ def selecionar_roleta(populacao, fitnesses, soma):
 
 
 def selecionar_torneio(populacao, fitnesses, tamanho_torneio=3):
-    """
-    Seleciona um indivíduo pelo método de torneio.
-
-    tamanho_torneio:
-        quantidade de indivíduos sorteados para competir.
-
-    Retorna o índice do indivíduo com maior fitness.
-    """
 
     participantes = []
 
@@ -73,9 +58,7 @@ def selecionar_torneio(populacao, fitnesses, tamanho_torneio=3):
 
     return melhor
 
-## ENTREGA
 def crossover_um_ponto(pai1, pai2):
-    """Combina os pais dividindo a lista de antenas em um ponto."""
 
     if len(pai1) != len(pai2):
         raise ValueError("Os pais devem possuir a mesma quantidade de antenas.")
@@ -88,10 +71,7 @@ def crossover_um_ponto(pai1, pai2):
     filho2 = pai2[:ponto] + pai1[ponto:]
     return filho1, filho2
 
-
-## ENTREGA
 def crossover_uniforme(pai1, pai2):
-    """Escolhe aleatoriamente de qual pai vem cada posição de antena."""
 
     if len(pai1) != len(pai2):
         raise ValueError("Os pais devem possuir a mesma quantidade de antenas.")
@@ -110,9 +90,7 @@ def crossover_uniforme(pai1, pai2):
     return filho1, filho2
 
 
-## ENTREGA
 def crossover_media(pai1, pai2):
-    """Gera filhos cujas posições são a média das posições dos pais."""
 
     if len(pai1) != len(pai2):
         raise ValueError("Os pais devem possuir a mesma quantidade de antenas.")
@@ -124,9 +102,7 @@ def crossover_media(pai1, pai2):
     return filho, filho.copy()
 
 
-## ENTREGA
 def mutacao(individuo, taxa_mutacao, largura, altura):
-    """Reposiciona cada antena com a probabilidade indicada pela taxa."""
 
     if not 0 <= taxa_mutacao <= 1:
         raise ValueError("A taxa de mutação deve estar entre 0 e 1.")
@@ -143,11 +119,3 @@ def mutacao(individuo, taxa_mutacao, largura, altura):
             )
 
     return individuo_mutado
-
-
-#inicializar()
-#selecionar_roleta()
-#selecionar_torneio() 
-#crossover()
-#mutacao()
-#executar_algoritmo()

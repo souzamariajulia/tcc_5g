@@ -1,8 +1,8 @@
+
 import argparse
 from pathlib import Path
 import time
 import random
-
 
 from algoritmo_genetico import (
     crossover_media,
@@ -32,11 +32,9 @@ def executar(
     if geracoes < 0:
         raise ValueError("O número de gerações não pode ser negativo.")
 
-    largura, altura, quantidade_antenas, quantidade_hosts, hosts, raio_cobertura  = ler_instancia(
+    largura, altura, quantidade_antenas, quantidade_hosts, hosts, raio_cobertura = ler_instancia(
         caminho_instancia
     )
-
-
 
     populacao = inicializar_populacao(
         tamanho_populacao,
@@ -93,14 +91,12 @@ def executar(
         populacao = nova_populacao
 
     fim = time.time()
-    duracao = fim - inicio 
+    duracao = fim - inicio
 
     fitnesses = [avaliar(individuo, hosts, raio_cobertura) for individuo in populacao]
     indice_melhor = max(range(len(populacao)), key=fitnesses.__getitem__)
     melhor_individuo = populacao[indice_melhor]
     melhor_fitness = fitnesses[indice_melhor]
-
-    print(f"{metodo_selecao};{metodo_crossover};{caminho_instancia};{melhor_fitness};{duracao}")
 
     if mostrar_visualizacao:
         visualizar(
@@ -110,6 +106,7 @@ def executar(
             largura,
             altura,
         )
+
     return melhor_individuo, melhor_fitness
 
 
@@ -148,7 +145,6 @@ def main():
         parser.error("Nenhuma instância .txt foi encontrada na pasta instancias.")
 
     random.seed(argumentos.semente)
-    print(f"{argumentos.semente}", end=";")
 
     for instancia in instancias:
         executar(
@@ -159,10 +155,10 @@ def main():
             argumentos.selecao,
             argumentos.crossover,
             argumentos.raio,
-            argumentos.semente
-            #mostrar_visualizacao=not argumentos.todas,
+            mostrar_visualizacao=False,
         )
 
 
 if __name__ == "__main__":
     main()
+
