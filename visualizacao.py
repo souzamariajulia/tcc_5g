@@ -28,4 +28,4 @@ def visualizar(individuo, hosts, raio_cobertura, largura, altura):
 
     ax.set_aspect("equal")
 
-    plt.show()
+    #plt.show()

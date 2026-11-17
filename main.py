@@ -1,4 +1,8 @@
 import argparse
+from pathlib import Path
+import time
+import random
+
 
 from algoritmo_genetico import (
     crossover_media,
@@ -21,15 +25,19 @@ def executar(
     metodo_selecao="torneio",
     metodo_crossover="uniforme",
     raio_cobertura=20,
+    mostrar_visualizacao=True,
 ):
     if tamanho_populacao < 1:
         raise ValueError("O tamanho da população deve ser pelo menos 1.")
     if geracoes < 0:
         raise ValueError("O número de gerações não pode ser negativo.")
 
-    largura, altura, quantidade_antenas, quantidade_hosts, hosts = ler_instancia(
+    largura, altura, quantidade_antenas, quantidade_hosts, hosts, raio_cobertura  = ler_instancia(
         caminho_instancia
     )
+
+
+
     populacao = inicializar_populacao(
         tamanho_populacao,
         quantidade_antenas,
@@ -53,6 +61,8 @@ def executar(
 
     selecionar = seletores[metodo_selecao]
     cruzar = cruzamentos[metodo_crossover]
+
+    inicio = time.time()
 
     for _ in range(geracoes):
         fitnesses = [avaliar(individuo, hosts, raio_cobertura) for individuo in populacao]
@@ -82,22 +92,24 @@ def executar(
 
         populacao = nova_populacao
 
+    fim = time.time()
+    duracao = fim - inicio 
+
     fitnesses = [avaliar(individuo, hosts, raio_cobertura) for individuo in populacao]
     indice_melhor = max(range(len(populacao)), key=fitnesses.__getitem__)
     melhor_individuo = populacao[indice_melhor]
     melhor_fitness = fitnesses[indice_melhor]
 
-    print(
-        f"Melhor indivíduo: {melhor_fitness}/{quantidade_hosts} hosts cobertos "
-        f"({caminho_instancia})"
-    )
-    visualizar(
-        melhor_individuo,
-        hosts,
-        raio_cobertura,
-        largura,
-        altura,
-    )
+    print(f"{metodo_selecao};{metodo_crossover};{caminho_instancia};{melhor_fitness};{duracao}")
+
+    if mostrar_visualizacao:
+        visualizar(
+            melhor_individuo,
+            hosts,
+            raio_cobertura,
+            largura,
+            altura,
+        )
     return melhor_individuo, melhor_fitness
 
 
@@ -107,13 +119,19 @@ def main():
         "instancia",
         nargs="?",
         default="instancias/t1000n0u2.txt",
-        help="Caminho do arquivo da instância.",
+        help="Caminho do arquivo da instância (ignorado com --todas).",
+    )
+    parser.add_argument(
+        "--todas",
+        action="store_true",
+        help="Executa todas as instâncias .txt da pasta instancias.",
     )
     parser.add_argument("--populacao", type=int, default=50)
     parser.add_argument("--geracoes", type=int, default=100)
     parser.add_argument("--taxa-mutacao", type=float, default=0.1)
     parser.add_argument("--raio", type=float, default=20)
     parser.add_argument("--selecao", choices=("roleta", "torneio"), default="torneio")
+    parser.add_argument("--semente", type=int, default=141592)
     parser.add_argument(
         "--crossover",
         choices=("um_ponto", "uniforme", "media"),
@@ -121,15 +139,29 @@ def main():
     )
     argumentos = parser.parse_args()
 
-    executar(
-        argumentos.instancia,
-        argumentos.populacao,
-        argumentos.geracoes,
-        argumentos.taxa_mutacao,
-        argumentos.selecao,
-        argumentos.crossover,
-        argumentos.raio,
+    instancias = (
+        sorted(Path("instancias").glob("*.txt"))
+        if argumentos.todas
+        else [Path(argumentos.instancia)]
     )
+    if not instancias:
+        parser.error("Nenhuma instância .txt foi encontrada na pasta instancias.")
+
+    random.seed(argumentos.semente)
+    print(f"{argumentos.semente}", end=";")
+
+    for instancia in instancias:
+        executar(
+            str(instancia),
+            argumentos.populacao,
+            argumentos.geracoes,
+            argumentos.taxa_mutacao,
+            argumentos.selecao,
+            argumentos.crossover,
+            argumentos.raio,
+            argumentos.semente
+            #mostrar_visualizacao=not argumentos.todas,
+        )
 
 
 if __name__ == "__main__":

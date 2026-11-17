@@ -8,13 +8,19 @@ def ler_instancia(caminho_arquivo):
     quantidade_antenas = int(linhas[1])
     quantidade_hosts = int(linhas[2])
 
+    if largura ==  1000:
+        raio_cobertura = 300
+    else:
+        raio_cobertura = 3000
+
+
     hosts = []
 
     for linha in linhas[3:]:
         x, y = map(int, linha.split())
         hosts.append((x, y))
 
-    return largura, altura, quantidade_antenas, quantidade_hosts, hosts
+    return largura, altura, quantidade_antenas, quantidade_hosts, hosts, raio_cobertura
 
 
 def distancia_euclidiana(x1, y1, x2, y2):
@@ -37,14 +43,15 @@ def avaliar(individuo, hosts, raio_cobertura):
     """
 
     hosts_cobertos = 0
-    raio_quadrado = raio_cobertura ** 2
+
+    raio_quadrado = raio_cobertura
 
     for host_x, host_y in hosts: 
 
         for antena_x, antena_y in individuo:
 
 
-            distancia_quadrada = (
+            distancia_quadrada = math.sqrt (
                 (host_x - antena_x) ** 2 +
                 (host_y - antena_y) ** 2
             )
