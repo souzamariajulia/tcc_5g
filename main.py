@@ -14,7 +14,6 @@ from algoritmo_genetico import (
     selecionar_torneio,
 )
 from avaliacao import avaliar, ler_instancia
-from visualizacao import visualizar
 
 
 def executar(
@@ -60,7 +59,7 @@ def executar(
     selecionar = seletores[metodo_selecao]
     cruzar = cruzamentos[metodo_crossover]
 
-    inicio = time.time()
+    inicio = time.perf_counter()
 
     for _ in range(geracoes):
         fitnesses = [avaliar(individuo, hosts, raio_cobertura) for individuo in populacao]
@@ -90,7 +89,7 @@ def executar(
 
         populacao = nova_populacao
 
-    fim = time.time()
+    fim = time.perf_counter()
     duracao = fim - inicio
 
     fitnesses = [avaliar(individuo, hosts, raio_cobertura) for individuo in populacao]
@@ -98,16 +97,8 @@ def executar(
     melhor_individuo = populacao[indice_melhor]
     melhor_fitness = fitnesses[indice_melhor]
 
-    if mostrar_visualizacao:
-        visualizar(
-            melhor_individuo,
-            hosts,
-            raio_cobertura,
-            largura,
-            altura,
-        )
 
-    return melhor_individuo, melhor_fitness
+    return melhor_individuo, melhor_fitness, duracao
 
 
 def main():
@@ -147,7 +138,7 @@ def main():
     random.seed(argumentos.semente)
 
     for instancia in instancias:
-        executar(
+        _, cobertura, duracao = executar(
             str(instancia),
             argumentos.populacao,
             argumentos.geracoes,
@@ -156,6 +147,11 @@ def main():
             argumentos.crossover,
             argumentos.raio,
             mostrar_visualizacao=False,
+        )
+        print(
+            f"{argumentos.semente};{argumentos.selecao};{argumentos.crossover};"
+            f"{instancia};{cobertura};{duracao}",
+            flush=True,
         )
 
 
