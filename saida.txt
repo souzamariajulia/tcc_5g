@@ -1,3 +1,0 @@
-141592;roleta;um_ponto;instancias/t100000n0u2.txt;11;3.102048873901367
-653589;roleta;um_ponto;instancias/t100000n0u2.txt;10;3.0513386726379395
-793238;roleta;um_ponto;instancias/t100000n0u2.txt;12;2.626504421234131
