@@ -1,93 +1,124 @@
-import argparse
-import math
-import random
-import time
-
-from avaliacao import ler_instancia
 
 
 def criar_candidatos(hosts, largura, altura):
+    """Seleciona coordenadas válidas e distintas dos hosts."""
     return list(dict.fromkeys(
-        (float(x), float(y)) for x, y in hosts
+        (x, y) for x, y in hosts
         if 0 <= x <= largura and 0 <= y <= altura
     ))
 
 
 def mascara_cobertura(posicao, hosts, raio_quadrado):
+    """Representa os hosts cobertos por uma posição usando bits."""
     x, y = posicao
     mascara = 0
-    for i, (hx, hy) in enumerate(hosts):
-        if (x - hx) ** 2 + (y - hy) ** 2 <= raio_quadrado + 1e-9:
-            mascara |= 1 << i
+    for indice, (host_x, host_y) in enumerate(hosts):
+        distancia_x = x - host_x
+        distancia_y = y - host_y
+        if distancia_x * distancia_x + distancia_y * distancia_y <= raio_quadrado:
+            mascara |= 1 << indice
     return mascara
 
 
-def construir_solucao(candidatos, mascaras, quantidade_antenas, alpha, rng):
-    solucao = []
-    cobertura = 0
-    disponiveis = list(range(len(candidatos)))
+def obter_mascara(posicao, hosts, raio_quadrado, cache_cobertura):
+    """Calcula a cobertura somente para posições ainda não avaliadas."""
+    if posicao not in cache_cobertura:
+        cache_cobertura[posicao] = mascara_cobertura(posicao, hosts, raio_quadrado)
+    return cache_cobertura[posicao]
 
-    for _ in range(min(quantidade_antenas, len(disponiveis))):
-        ganhos = [(mascaras[i] & ~cobertura).bit_count() for i in disponiveis]
-        maior, menor = max(ganhos), min(ganhos)
-        limite = maior - alpha * (maior - menor)
-        lrc = [i for i, ganho in zip(disponiveis, ganhos) if ganho >= limite]
-        escolhido = rng.choice(lrc)
-        solucao.append(candidatos[escolhido])
-        cobertura |= mascaras[escolhido]
-        disponiveis.remove(escolhido)
+
+def construir_solucao(candidatos, mascaras_cobertura, quantidade_antenas,
+                      fator_aleatoriedade, gerador_aleatorio):
+    """Constrói uma solução com escolhas gulosas e aleatoriedade controlada."""
+    if not 0 <= quantidade_antenas <= len(candidatos):
+        raise ValueError('Quantidade inválida de antenas ou candidatos insuficientes.')
+    if not 0 <= fator_aleatoriedade <= 1:
+        raise ValueError('O fator de aleatoriedade deve estar entre 0 e 1.')
+
+    solucao = []
+    cobertura_atual = 0
+    indices_disponiveis = list(range(len(candidatos)))
+
+    for _ in range(quantidade_antenas):
+        hosts_nao_cobertos = ~cobertura_atual
+        ganhos_cobertura = [
+            (mascaras_cobertura[indice] & hosts_nao_cobertos).bit_count()
+            for indice in indices_disponiveis
+        ]
+        maior_ganho = max(ganhos_cobertura)
+        menor_ganho = min(ganhos_cobertura)
+        limite_ganho = maior_ganho - fator_aleatoriedade * (maior_ganho - menor_ganho)
+        lista_restrita_candidatos = [
+            indice for indice, ganho in zip(indices_disponiveis, ganhos_cobertura)
+            if ganho >= limite_ganho
+        ]
+        indice_escolhido = gerador_aleatorio.choice(lista_restrita_candidatos)
+        solucao.append(candidatos[indice_escolhido])
+        cobertura_atual |= mascaras_cobertura[indice_escolhido]
+        indices_disponiveis.remove(indice_escolhido)
 
     return solucao
 
 
-def busca_local(solucao, hosts, raio_quadrado, largura, altura, passo):
-    mascaras = [mascara_cobertura(p, hosts, raio_quadrado) for p in solucao]
+def unir_coberturas(mascaras):
     cobertura = 0
-    for m in mascaras:
-        cobertura |= m
-    fitness = cobertura.bit_count()
-    movimentos = [(dx, dy) for dx in (-passo, 0, passo)
-                  for dy in (-passo, 0, passo) if dx or dy]
+    for mascara in mascaras:
+        cobertura |= mascara
+    return cobertura
 
-    while True:
+
+def busca_local(solucao, hosts, raio_quadrado, largura, altura, passo,
+                cache_cobertura):
+    """Aplica o melhor movimento até não existir melhoria na cobertura."""
+    mascaras_antenas = [
+        obter_mascara(posicao, hosts, raio_quadrado, cache_cobertura)
+        for posicao in solucao
+    ]
+    hosts_cobertos = unir_coberturas(mascaras_antenas).bit_count()
+    posicoes_ocupadas = set(solucao)
+    movimentos = [
+        (-passo, -passo), (-passo, 0), (-passo, passo),
+        (0, -passo),                    (0, passo),
+        (passo, -passo),  (passo, 0),  (passo, passo)
+    ]
+
+    while hosts_cobertos < len(hosts):
         melhor_movimento = None
-        melhor_fitness = fitness
-        for indice, (x, y) in enumerate(solucao):
-            cobertura_outras = 0
-            for j, m in enumerate(mascaras):
-                if j != indice:
-                    cobertura_outras |= m
+        melhor_cobertura = hosts_cobertos
 
-            for dx, dy in movimentos:
-                nova_posicao = (x + dx, y + dy)
-                nx, ny = nova_posicao
-                if not (0 <= nx <= largura and 0 <= ny <= altura):
+        for indice, (x, y) in enumerate(solucao):
+            # Mantém fixas todas as antenas, exceto a que será movida.
+            cobertura_outras = unir_coberturas(
+                mascaras_antenas[:indice] + mascaras_antenas[indice + 1:]
+            )
+
+            for deslocamento_x, deslocamento_y in movimentos:
+                nova_posicao = (x + deslocamento_x, y + deslocamento_y)
+                novo_x, novo_y = nova_posicao
+
+                if not (0 <= novo_x <= largura and 0 <= novo_y <= altura):
                     continue
-                nova_mascara = mascara_cobertura(nova_posicao, hosts, raio_quadrado)
-                novo_fitness = (cobertura_outras | nova_mascara).bit_count()
-                if novo_fitness > melhor_fitness:
-                    melhor_fitness = novo_fitness
+                if nova_posicao in posicoes_ocupadas:
+                    continue
+
+                nova_mascara = obter_mascara(
+                    nova_posicao, hosts, raio_quadrado, cache_cobertura
+                )
+                nova_cobertura = (cobertura_outras | nova_mascara).bit_count()
+
+                if nova_cobertura > melhor_cobertura:
+                    melhor_cobertura = nova_cobertura
                     melhor_movimento = (indice, nova_posicao, nova_mascara)
 
         if melhor_movimento is None:
-            return solucao, fitness
+            break
 
+        # Aplica somente o melhor movimento encontrado na rodada.
         indice, nova_posicao, nova_mascara = melhor_movimento
+        posicoes_ocupadas.remove(solucao[indice])
+        posicoes_ocupadas.add(nova_posicao)
         solucao[indice] = nova_posicao
-        mascaras[indice] = nova_mascara
-        fitness = melhor_fitness
+        mascaras_antenas[indice] = nova_mascara
+        hosts_cobertos = melhor_cobertura
 
-
-def executar_grasp(caminho_instancia, iteracoes=100, alpha=0.3,
-                    passo=10.0, semente=141592):
-    if iteracoes <= 0 or not 0 <= alpha <= 1 or passo <= 0:
-        raise ValueError('Use iteracoes > 0, 0 <= alpha <= 1 e passo > 0.')
-
-    largura, altura, quantidade_antenas, _, hosts, raio = ler_instancia(caminho_instancia)
-    if quantidade_antenas < 0 or raio < 0:
-        raise ValueError('Quantidade de antenas e raio devem ser nao negativos.')
-    if quantidade_antenas and not hosts:
-        raise ValueError('A instancia nao possui hosts para gerar candidatos.')
-
-    rng = random.Random(semente)
-    inicio = time.perf_counter()
+    return solucao, hosts_cobertos
