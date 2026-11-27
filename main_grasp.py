@@ -72,13 +72,16 @@ def registrar_resultado(caminho_csv, resultado):
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit('Uso: python main_grasp.py caminho_da_instancia')
+    if len(sys.argv) not in (2, 3):
+        sys.exit('Uso: python main_grasp.py caminho_da_instancia [semente]')
 
     instancia = sys.argv[1]
     iteracoes = 100
     passo = 10
-    semente = 141592
+    try:
+        semente = int(sys.argv[2]) if len(sys.argv) == 3 else 141592
+    except ValueError:
+        sys.exit('A semente deve ser um número inteiro.')
     parada_antecipada = False
 
     solucao, hosts_cobertos, duracao = executar_grasp(
